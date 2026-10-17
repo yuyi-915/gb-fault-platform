@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GB故障处理平台</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 -->
+        <header class="app-header">
+            <h1>GB故障处理平台</h1>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="showStats()" title="统计">📊</button>
+                <button class="btn-icon" onclick="exportData()" title="导出">📥</button>
+                <button class="btn-icon" onclick="document.getElementById('fileInput').click()" title="导入">📤</button>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="importData(event)" style="display:none">
+            </div>
+        </header>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="搜索故障单号、机柜SN、故障类型..." oninput="searchFaults()">
+            <button class="btn-primary" onclick="openAddModal()">+ 新增故障</button>
+        </div>
+
+        <!-- 筛选标签 -->
+        <div class="filter-tabs">
+            <button class="tab active" onclick="filterByStatus('all')">全部</button>
+            <button class="tab" onclick="filterByStatus('处理中')">处理中</button>
+            <button class="tab" onclick="filterByStatus('待厂家')">待厂家</button>
+            <button class="tab" onclick="filterByStatus('已闭环')">已闭环</button>
+        </div>
+
+        <!-- 故障列表 -->
+        <div id="faultList" class="fault-list">
+            <!-- 动态生成 -->
+        </div>
+
+        <!-- 新增/编辑弹窗 -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">新增故障单</h2>
+                    <button class="btn-close" onclick="closeModal()">&times;</button>
+                </div>
+                <form id="faultForm" onsubmit="saveFault(event)">
+                    <input type="hidden" id="faultId">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>客户报修时间</label>
+                            <input type="date" id="customerTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label>向厂家报修时间</label>
+                            <input type="date" id="vendorTime">
+                        </div>
+                        <div class="form-group">
+                            <label>机房机柜位置</label>
+                            <input type="text" id="cabinetLocation" placeholder="如：604-H01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>物理位置</label>
+                            <input type="text" id="physicalLocation" placeholder="如：18U">
+                        </div>
+                        <div class="form-group">
+                            <label>机柜SN</label>
+                            <input type="text" id="cabinetSN" placeholder="机柜序列号">
+                        </div>
+                        <div class="form-group">
+                            <label>托盘SN</label>
+                            <input type="text" id="traySN" placeholder="托盘序列号">
+                        </div>
+                        <div class="form-group">
+                            <label>GPU SN</label>
+                            <input type="text" id="gpuSN" placeholder="GPU序列号">
+                        </div>
+                        <div class="form-group">
+                            <label>故障类型</label>
+                            <select id="faultType">
+                                <option value="GPU">GPU</option>
+                                <option value="网卡">网卡</option>
+                                <option value="电源">电源</option>
+                                <option value="内存">内存</option>
+                                <option value="硬盘">硬盘</option>
+                                <option value="主板">主板</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>故障详情</label>
+                            <textarea id="faultDetail" rows="3" placeholder="详细描述故障现象..."></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>故障处理进展</label>
+                            <textarea id="faultProgress" rows="3" placeholder="记录处理步骤和时间节点..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>处理状态</label>
+                            <select id="status">
+                                <option value="处理中">处理中</option>
+                                <option value="待厂家">待厂家</option>
+                                <option value="已闭环">已闭环</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>闭环时间</label>
+                            <input type="date" id="closeTime">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal()">取消</button>
+                        <button type="submit" class="btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 详情弹窗 -->
+        <div id="detailModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>故障详情</h2>
+                    <button class="btn-close" onclick="closeDetailModal()">&times;</button>
+                </div>
+                <div id="detailContent" class="detail-content">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计弹窗 -->
+        <div id="statsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>故障统计</h2>
+                    <button class="btn-close" onclick="closeStatsModal()">&times;</button>
+                </div>
+                <div id="statsContent" class="stats-content">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
